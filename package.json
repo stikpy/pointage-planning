@@ -6,24 +6,28 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup-db": "node scripts/setup-database.js",
+    "test-supabase": "node scripts/test-supabase.js"
   },
   "dependencies": {
-    "lucide-react": "^0.544.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.0",
+    "lucide-react": "^0.294.0",
     "next": "14.0.0",
+    "pg": "^8.11.3",
+    "qrcode": "^1.5.3",
     "qr-scanner": "^1.4.2",
-    "qrcode": "^1.5.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-qr-scanner": "^1.0.0-alpha.11"
+    "react": "^18",
+    "react-dom": "^18",
+    "typescript": "^5"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@types/qrcode": "^1.5.5",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "eslint": "^8.0.0",
-    "eslint-config-next": "14.0.0",
-    "typescript": "^5.0.0"
+    "@types/pg": "^8.10.9",
+    "@types/qrcode": "^1.5.5"
   }
 }
