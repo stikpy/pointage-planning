@@ -28,6 +28,8 @@ export default function ClockPage({ params }: ClockPageProps) {
   const [success, setSuccess] = useState<string>('');
   const [isScanning, setIsScanning] = useState(false);
   const [needsIdentityVerification, setNeedsIdentityVerification] = useState(false);
+  const [activeShift, setActiveShift] = useState<any>(null);
+  const [loadingShift, setLoadingShift] = useState(true);
 
   useEffect(() => {
     // Timeout de sécurité pour forcer l'affichage
@@ -392,8 +394,6 @@ export default function ClockPage({ params }: ClockPageProps) {
   }
 
   // Vérifier si l'employé est déjà en cours de travail
-  const [activeShift, setActiveShift] = useState<any>(null);
-  const [loadingShift, setLoadingShift] = useState(true);
 
   useEffect(() => {
     const checkActiveShift = async () => {
