@@ -230,6 +230,27 @@ export default function ClockPage({ params }: ClockPageProps) {
     }
   };
 
+  // Fonction pour déterminer le statut des pointages
+  const getPunchStatus = () => {
+    if (!activeShift) {
+      return {
+        arrival: false,
+        morningBreak: false,
+        eveningBreak: false,
+        departure: false
+      };
+    }
+
+    return {
+      arrival: !!activeShift.start_time,
+      morningBreak: !!activeShift.break_start,
+      eveningBreak: !!activeShift.break_end,
+      departure: !!activeShift.end_time
+    };
+  };
+
+  const punchStatus = getPunchStatus();
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">

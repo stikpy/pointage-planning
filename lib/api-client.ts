@@ -27,6 +27,8 @@ export interface Shift {
   employee_id: string
   start_time: string
   end_time: string | null
+  break_start?: string | null
+  break_end?: string | null
   break_duration: number
   total_hours: number | null
   status: 'active' | 'completed' | 'cancelled'
