@@ -230,30 +230,36 @@ export default function ClockPage({ params }: ClockPageProps) {
         // Créer un nom de fichier unique
         const fileName = `clock_photo_${params.employeeId}_${Date.now()}.jpg`;
         
-        // Uploader vers Supabase Storage
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('clock-photos')
-          .upload(fileName, blob, {
-            contentType: 'image/jpeg',
-            cacheControl: '3600'
-          });
+        // Uploader via l'endpoint API (contourne RLS)
+        const response = await fetch('/api/clock-photos', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fileName,
+            imageData: base64Data
+          })
+        });
         
-        if (uploadError) {
-          console.error('❌ Erreur upload photo:', uploadError);
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('❌ Erreur upload photo:', errorData);
           setError('Erreur lors de l\'enregistrement de la photo.');
           return;
         }
         
-        // Obtenir l'URL publique de la photo
-        const { data: urlData } = supabase.storage
-          .from('clock-photos')
-          .getPublicUrl(fileName);
+        const uploadData = await response.json();
+        console.log('✅ Photo uploadée via API:', uploadData);
+        
+        // Construire l'URL publique
+        const photoUrl = `https://ztgqzlrvrgnvilkipznr.supabase.co/storage/v1/object/public/clock-photos/${fileName}`;
         
         // Sauvegarder les métadonnées de la photo via l'API
         const photoRecord = await createClockPhoto({
           employee_id: params.employeeId,
           photo_data: photoData, // Garder la version base64 pour compatibilité
-          photo_url: urlData.publicUrl,
+          photo_url: photoUrl,
           timestamp: timestamp.toISOString(),
           metadata: {
             fileName,
