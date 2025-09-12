@@ -1,138 +1,103 @@
-const { createClient } = require('@supabase/supabase-js')
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config({ path: '.env.local' });
 
-// Configuration Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ztgqzlrvrgnvilkipznr.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_secret_kYJzfGKahg7cgWnYKR8WVw_46EjlJLl'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-async function testMCPConnection() {
-  console.log('🔍 Test de connexion MCP Supabase...')
-  console.log('URL:', supabaseUrl)
-  console.log('Service Key:', supabaseServiceKey.substring(0, 20) + '...')
-  
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Variables d\'environnement manquantes');
+  process.exit(1);
+}
+
+// Utiliser la clé de service pour bypasser RLS
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+async function testConnection() {
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    console.log('🔍 Test de connexion Supabase...');
     
-    // Test 1: Vérifier les tables existantes
-    console.log('\n1. 📊 Vérification des tables...')
-    const { data: tables, error: tablesError } = await supabase
-      .from('pg_tables')
-      .select('tablename')
-      .eq('schemaname', 'public')
-      .in('tablename', ['employees', 'shifts', 'clock_sessions', 'clock_photos', 'app_settings'])
-    
-    if (tablesError) {
-      console.error('❌ Erreur tables:', tablesError.message)
-    } else {
-      console.log('✅ Tables trouvées:', tables.map(t => t.tablename))
-    }
-    
-    // Test 2: Vérifier les employés
-    console.log('\n2. 👥 Vérification des employés...')
-    const { data: employees, error: empError } = await supabase
+    // Test 1: Connexion de base
+    const { data: testData, error: testError } = await supabase
       .from('employees')
-      .select('id, name, role, pin_code, work_schedule')
-      .limit(10)
+      .select('count')
+      .limit(1);
     
-    if (empError) {
-      console.error('❌ Erreur employés:', empError.message)
-    } else {
-      console.log('✅ Employés trouvés:', employees.length)
-      employees.forEach(emp => {
-        console.log(`   - ${emp.name} (${emp.role}) - PIN: ${emp.pin_code}`)
-        console.log(`     Horaires: ${emp.work_schedule?.startTime} - ${emp.work_schedule?.endTime}`)
-      })
+    if (testError) {
+      console.error('❌ Erreur test connexion:', testError);
+      return;
     }
     
-    // Test 3: Vérifier les paramètres
-    console.log('\n3. ⚙️ Vérification des paramètres...')
-    const { data: settings, error: settingsError } = await supabase
-      .from('app_settings')
-      .select('id, value, description')
+    console.log('✅ Connexion Supabase OK');
     
-    if (settingsError) {
-      console.error('❌ Erreur paramètres:', settingsError.message)
-    } else {
-      console.log('✅ Paramètres trouvés:', settings.length)
-      settings.forEach(setting => {
-        console.log(`   - ${setting.id}: ${setting.description}`)
-        console.log(`     Valeur: ${JSON.stringify(setting.value)}`)
-      })
-    }
+    // Test 2: Vérifier les politiques RLS
+    console.log('\n🔍 Vérification des politiques RLS...');
     
-    // Test 4: Test d'insertion d'un créneau
-    console.log('\n4. 📝 Test d\'insertion d\'un créneau...')
-    const testShift = {
-      employee_id: employees[0]?.id || 'emp_1',
-      start_time: new Date().toISOString(),
-      status: 'active',
-      notes: 'Test MCP connection'
-    }
-    
-    const { data: newShift, error: shiftError } = await supabase
-      .from('shifts')
-      .insert(testShift)
-      .select()
-    
-    if (shiftError) {
-      console.error('❌ Erreur insertion créneau:', shiftError.message)
-    } else {
-      console.log('✅ Créneau inséré:', newShift[0]?.id)
-      
-      // Nettoyer le test
-      await supabase
-        .from('shifts')
-        .delete()
-        .eq('id', newShift[0]?.id)
-      console.log('🧹 Créneau de test supprimé')
-    }
-    
-    // Test 5: Vérifier les index
-    console.log('\n5. 🔍 Vérification des index...')
-    const { data: indexes, error: indexError } = await supabase
-      .from('pg_indexes')
-      .select('indexname, tablename')
-      .eq('schemaname', 'public')
-      .like('indexname', 'idx_%')
-    
-    if (indexError) {
-      console.error('❌ Erreur index:', indexError.message)
-    } else {
-      console.log('✅ Index trouvés:', indexes.length)
-      indexes.forEach(idx => {
-        console.log(`   - ${idx.indexname} sur ${idx.tablename}`)
-      })
-    }
-    
-    // Test 6: Vérifier RLS
-    console.log('\n6. 🔒 Vérification Row Level Security...')
-    const { data: rlsTables, error: rlsError } = await supabase
-      .from('pg_class')
-      .select('relname')
-      .eq('relrowsecurity', true)
-      .in('relname', ['employees', 'shifts', 'clock_sessions', 'clock_photos', 'app_settings'])
+    const { data: rlsData, error: rlsError } = await supabase
+      .rpc('exec_sql', {
+        sql: `
+          SELECT tablename, rowsecurity as rls_enabled
+          FROM pg_tables
+          WHERE schemaname='public' 
+            AND tablename IN ('employees','shifts','clock_sessions','clock_photos','app_settings');
+        `
+      });
     
     if (rlsError) {
-      console.error('❌ Erreur RLS:', rlsError.message)
+      console.error('❌ Erreur RLS check:', rlsError);
     } else {
-      console.log('✅ RLS activé sur:', rlsTables.map(t => t.relname))
+      console.log('📊 État RLS des tables:', rlsData);
     }
     
-    console.log('\n🎉 Test MCP Supabase terminé avec succès !')
-    console.log('\n📋 Résumé :')
-    console.log(`✅ Tables: ${tables?.length || 0}/5`)
-    console.log(`✅ Employés: ${employees?.length || 0}`)
-    console.log(`✅ Paramètres: ${settings?.length || 0}`)
-    console.log(`✅ Index: ${indexes?.length || 0}`)
-    console.log(`✅ RLS: ${rlsTables?.length || 0}/5`)
+    // Test 3: Vérifier les politiques existantes
+    const { data: policiesData, error: policiesError } = await supabase
+      .rpc('exec_sql', {
+        sql: `
+          SELECT policyname, cmd, roles, qual, with_check
+          FROM pg_policies
+          WHERE schemaname='public' AND tablename='employees';
+        `
+      });
+    
+    if (policiesError) {
+      console.error('❌ Erreur policies check:', policiesError);
+    } else {
+      console.log('📋 Politiques employees:', policiesData);
+    }
+    
+    // Test 4: Vérifier le bucket storage
+    const { data: bucketData, error: bucketError } = await supabase
+      .rpc('exec_sql', {
+        sql: `
+          SELECT id, name, public FROM storage.buckets WHERE id='clock-photos';
+        `
+      });
+    
+    if (bucketError) {
+      console.error('❌ Erreur bucket check:', bucketError);
+    } else {
+      console.log('🪣 Bucket clock-photos:', bucketData);
+    }
+    
+    // Test 5: Vérifier les politiques storage
+    const { data: storagePoliciesData, error: storagePoliciesError } = await supabase
+      .rpc('exec_sql', {
+        sql: `
+          SELECT policyname, cmd, roles, qual, with_check
+          FROM pg_policies
+          WHERE schemaname='storage' AND tablename='objects';
+        `
+      });
+    
+    if (storagePoliciesError) {
+      console.error('❌ Erreur storage policies check:', storagePoliciesError);
+    } else {
+      console.log('📋 Politiques storage:', storagePoliciesData);
+    }
     
   } catch (error) {
-    console.error('❌ Erreur fatale:', error.message)
+    console.error('❌ Erreur générale:', error);
   }
 }
 
-// Exécuter le script si appelé directement
-if (require.main === module) {
-  testMCPConnection()
-}
-
-module.exports = { testMCPConnection }
+// Exécuter le test
+testConnection();

@@ -12,10 +12,7 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=*'
           },
-          {
-            key: 'Feature-Policy',
-            value: 'camera *'
-          }
+          
         ]
       }
     ]

@@ -66,6 +66,36 @@ export default function ClockPage({ params }: ClockPageProps) {
     return () => clearTimeout(timeout);
   }, [params.employeeId]);
 
+  // Vérifier si l'employé est déjà en cours de travail
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      if (!employee) return;
+      
+      try {
+        const { data: shifts, error } = await supabase
+          .from('shifts')
+          .select('*')
+          .eq('employee_id', employee.id)
+          .is('end_time', null)
+          .eq('status', 'active')
+          .order('start_time', { ascending: false })
+          .limit(1);
+        
+        if (error) {
+          console.error('❌ Erreur vérification créneaux:', error);
+        } else {
+          setActiveShift(shifts && shifts.length > 0 ? shifts[0] : null);
+        }
+      } catch (error) {
+        console.error('❌ Erreur vérification créneaux:', error);
+      } finally {
+        setLoadingShift(false);
+      }
+    };
+
+    checkActiveShift();
+  }, [employee]);
+
   const validateClockSessionLocal = async () => {
     try {
       console.log('🔍 Début de la validation de session...');
@@ -393,36 +423,6 @@ export default function ClockPage({ params }: ClockPageProps) {
     );
   }
 
-  // Vérifier si l'employé est déjà en cours de travail
-
-  useEffect(() => {
-    const checkActiveShift = async () => {
-      if (!employee) return;
-      
-      try {
-        const { data: shifts, error } = await supabase
-          .from('shifts')
-          .select('*')
-          .eq('employee_id', employee.id)
-          .is('end_time', null)
-          .eq('status', 'active')
-          .order('start_time', { ascending: false })
-          .limit(1);
-        
-        if (error) {
-          console.error('❌ Erreur vérification créneaux:', error);
-        } else {
-          setActiveShift(shifts && shifts.length > 0 ? shifts[0] : null);
-        }
-      } catch (error) {
-        console.error('❌ Erreur vérification créneaux:', error);
-      } finally {
-        setLoadingShift(false);
-      }
-    };
-
-    checkActiveShift();
-  }, [employee]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
