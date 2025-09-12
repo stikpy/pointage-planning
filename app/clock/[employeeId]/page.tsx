@@ -273,7 +273,7 @@ export default function ClockPage({ params }: ClockPageProps) {
           return;
         }
         
-        console.log('✅ Photo uploadée:', urlData.publicUrl);
+        console.log('✅ Photo uploadée:', photoUrl);
         setSuccess('Pointage enregistré avec photo !');
         
       } catch (error) {
