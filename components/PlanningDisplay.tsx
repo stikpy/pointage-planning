@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 interface WorkSchedule {
-  days: string[];
+  days: number[];
   startTime: string;
   endTime: string;
 }
@@ -128,9 +128,10 @@ export default function PlanningDisplay({
           <div className="col-span-2">
             <span className="font-medium text-gray-600">Jours:</span>
             <span className="ml-2 text-gray-800">
-              {workSchedule.days.map(day => 
-                day.charAt(0).toUpperCase() + day.slice(1)
-              ).join(', ')}
+              {workSchedule.days.map(day => {
+                const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+                return dayNames[day] || `Jour ${day}`;
+              }).join(', ')}
             </span>
           </div>
         </div>

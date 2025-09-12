@@ -12,9 +12,9 @@ interface Employee {
   id: string;
   name: string;
   role: string;
-  pinCode: string;
-  workSchedule: {
-    days: string[];
+  pin_code: string;
+  work_schedule: {
+    days: number[];
     startTime: string;
     endTime: string;
   };
@@ -396,12 +396,12 @@ export default function GeneralClockPage() {
 
         {/* Interface principale */}
         {!needsIdentityVerification && !needsPhotoCapture && (
-          <PlanningDisplay
-            employeeName={employee.name}
-            workSchedule={employee.workSchedule}
-            currentShift={activeShift}
-            onActionSelect={handleActionSelect}
-          />
+        <PlanningDisplay
+          employeeName={employee.name}
+          workSchedule={employee.work_schedule}
+          currentShift={activeShift}
+          onActionSelect={handleActionSelect}
+        />
         )}
 
         {/* Vérification d'identité */}
