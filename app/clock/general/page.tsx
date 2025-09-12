@@ -6,30 +6,8 @@ import { validateQRCode, decodeQRData } from '../../../lib/qr-generator';
 import IdentityVerification from '../../../components/IdentityVerification';
 import PlanningDisplay from '../../../components/PlanningDisplay';
 import PhotoCapture from '../../../components/PhotoCapture';
-import { getEmployee, getActiveShift, createShift, updateShift, createClockPhoto } from '../../../lib/api-client';
+import { getEmployee, getActiveShift, createShift, updateShift, createClockPhoto, Employee, Shift } from '../../../lib/api-client';
 
-interface Employee {
-  id: string;
-  name: string;
-  role: string;
-  pin_code: string;
-  work_schedule: {
-    days: number[];
-    startTime: string;
-    endTime: string;
-  };
-}
-
-interface Shift {
-  id: number;
-  employee_id: string;
-  start_time: string;
-  end_time?: string;
-  status: 'active' | 'completed';
-  shift_type?: 'morning' | 'evening';
-  break_start?: string;
-  break_end?: string;
-}
 
 export default function GeneralClockPage() {
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -217,7 +195,7 @@ export default function GeneralClockPage() {
     const shiftData = {
       employee_id: employee.id,
       start_time: timestamp,
-      status: 'active',
+      status: 'active' as const,
       shift_type: new Date().getHours() < 12 ? 'morning' : 'evening'
     };
 
@@ -418,7 +396,7 @@ export default function GeneralClockPage() {
           <PhotoCapture
             onPhotoTaken={handlePhotoTaken}
             onCancel={() => setNeedsPhotoCapture(false)}
-            action={selectedAction}
+            employeeName={employee.name}
           />
         )}
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Shield, User, Clock, AlertTriangle, CheckCircle, XCircle, Camera } from 'lucide-react';
-import { Employee } from '../types';
+import { Employee } from '../lib/api-client';
 import PhotoCapture from './PhotoCapture';
 
 interface IdentityVerificationProps {
@@ -32,26 +32,26 @@ export default function IdentityVerification({ employee, onVerified, onCancel }:
     // Debug: afficher les informations
     const debugMessages = [
       `🔍 Debug: Code PIN saisi: "${pinCode}" (Type: ${typeof pinCode})`,
-      `🔍 Debug: Code PIN attendu: "${employee.pinCode}" (Type: ${typeof employee.pinCode})`,
+      `🔍 Debug: Code PIN attendu: "${employee.pin_code}" (Type: ${typeof employee.pin_code})`,
       `🔍 Debug: Employé: ${employee.name}`,
-      `🔍 Debug: Comparaison stricte: ${pinCode === employee.pinCode}`,
-      `🔍 Debug: Comparaison non-stricte: ${pinCode == employee.pinCode}`
+      `🔍 Debug: Comparaison stricte: ${pinCode === employee.pin_code}`,
+      `🔍 Debug: Comparaison non-stricte: ${pinCode == employee.pin_code}`
     ];
     setDebugInfo(debugMessages);
     
     console.log('🔍 IdentityVerification Debug:');
     console.log('- Code PIN saisi:', pinCode, 'Type:', typeof pinCode);
-    console.log('- Code PIN attendu:', employee.pinCode, 'Type:', typeof employee.pinCode);
+    console.log('- Code PIN attendu:', employee.pin_code, 'Type:', typeof employee.pin_code);
     console.log('- Employé:', employee.name);
-    console.log('- Comparaison stricte:', pinCode === employee.pinCode);
-    console.log('- Comparaison non-stricte:', pinCode == employee.pinCode);
+    console.log('- Comparaison stricte:', pinCode === employee.pin_code);
+    console.log('- Comparaison non-stricte:', pinCode == employee.pin_code);
     console.log('- Employee object complet:', employee);
 
     // Simuler une vérification (en production, ceci serait fait côté serveur)
     setTimeout(() => {
       // Normaliser les codes PIN (enlever les espaces, convertir en string)
       const normalizedPin = pinCode.trim();
-      const normalizedExpectedPin = String(employee.pinCode || '').trim();
+      const normalizedExpectedPin = String(employee.pin_code || '').trim();
       
       console.log('PIN normalisé saisi:', normalizedPin);
       console.log('PIN normalisé attendu:', normalizedExpectedPin);

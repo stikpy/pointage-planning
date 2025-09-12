@@ -9,15 +9,18 @@ export default function TestClockPage() {
   const testEmployee = {
     id: 'emp_1',
     name: 'Marie Dubois',
-    role: 'employee' as const,
     email: 'marie.dubois@restaurant.com',
     position: 'Chef de cuisine',
-    isActive: true,
-    maxHoursPerDay: 10,
-    maxHoursPerWeek: 50,
-    minBreakMinutes: 30,
-    pinCode: '1234',
-    workSchedule: { startTime: '08:00', endTime: '18:00', days: [1,2,3,4,5] }
+    role: 'employee',
+    is_active: true,
+    max_hours_per_day: 10,
+    max_hours_per_week: 50,
+    min_break_minutes: 30,
+    pin_code: '1234',
+    photo_url: null,
+    work_schedule: { startTime: '08:00', endTime: '18:00', days: [1,2,3,4,5] },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
 
   if (showVerification) {
