@@ -39,7 +39,9 @@ export interface ClockPhoto {
   id: number
   employee_id: string
   photo_url: string
+  photo_data?: string
   timestamp: string
+  metadata?: any
   created_at: string
 }
 
