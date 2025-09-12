@@ -140,7 +140,7 @@ export async function getClockPhotos(employeeId: string): Promise<ClockPhoto[]> 
 
 export async function createClockPhoto(photo: Partial<ClockPhoto>): Promise<ClockPhoto | null> {
   try {
-    const response = await fetch(`${API_BASE}/clock-photos`, {
+    const response = await fetch(`${API_BASE}/clock-photos-metadata`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -148,10 +148,13 @@ export async function createClockPhoto(photo: Partial<ClockPhoto>): Promise<Cloc
       body: JSON.stringify(photo)
     })
     
-    if (!response.ok) throw new Error('Failed to create clock photo')
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Failed to create clock photo: ${errorData.error || response.statusText}`);
+    }
     
     const data = await response.json()
-    return data[0] || null
+    return data.data || null
   } catch (error) {
     console.error('Error creating clock photo:', error)
     return null
