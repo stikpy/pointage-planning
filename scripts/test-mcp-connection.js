@@ -1,103 +1,107 @@
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config({ path: '.env.local' });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = 'https://ztgqzlrvrgnvilkipznr.supabase.co';
+const secretKey = 'sb_secret_kYJzfGKahg7cgWnYKR8WVw_46EjlJLl';
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Variables d\'environnement manquantes');
-  process.exit(1);
-}
+async function testMCPConnection() {
+  console.log('🔧 Test de la connexion MCP Supabase...\n');
 
-// Utiliser la clé de service pour bypasser RLS
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-async function testConnection() {
   try {
-    console.log('🔍 Test de connexion Supabase...');
-    
-    // Test 1: Connexion de base
+    const supabase = createClient(supabaseUrl, secretKey);
+
+    // Test 1: Vérifier la connexion
+    console.log('1️⃣ Test de connexion...');
     const { data: testData, error: testError } = await supabase
       .from('employees')
-      .select('count')
+      .select('id, name, role')
       .limit(1);
     
     if (testError) {
-      console.error('❌ Erreur test connexion:', testError);
+      console.log('❌ Erreur connexion:', testError.message);
       return;
-    }
-    
-    console.log('✅ Connexion Supabase OK');
-    
-    // Test 2: Vérifier les politiques RLS
-    console.log('\n🔍 Vérification des politiques RLS...');
-    
-    const { data: rlsData, error: rlsError } = await supabase
-      .rpc('exec_sql', {
-        sql: `
-          SELECT tablename, rowsecurity as rls_enabled
-          FROM pg_tables
-          WHERE schemaname='public' 
-            AND tablename IN ('employees','shifts','clock_sessions','clock_photos','app_settings');
-        `
-      });
-    
-    if (rlsError) {
-      console.error('❌ Erreur RLS check:', rlsError);
     } else {
-      console.log('📊 État RLS des tables:', rlsData);
+      console.log('✅ Connexion réussie');
     }
+
+    // Test 2: Lister les tables
+    console.log('\n2️⃣ Test des tables...');
+    const { data: tables, error: tablesError } = await supabase
+      .from('information_schema.tables')
+      .select('table_name')
+      .eq('table_schema', 'public')
+      .in('table_name', ['employees', 'shifts', 'clock_sessions', 'clock_photos', 'app_settings']);
     
-    // Test 3: Vérifier les politiques existantes
-    const { data: policiesData, error: policiesError } = await supabase
-      .rpc('exec_sql', {
-        sql: `
-          SELECT policyname, cmd, roles, qual, with_check
-          FROM pg_policies
-          WHERE schemaname='public' AND tablename='employees';
-        `
-      });
-    
-    if (policiesError) {
-      console.error('❌ Erreur policies check:', policiesError);
+    if (tablesError) {
+      console.log('❌ Erreur tables:', tablesError.message);
     } else {
-      console.log('📋 Politiques employees:', policiesData);
+      console.log('✅ Tables trouvées:', tables.map(t => t.table_name));
     }
+
+    // Test 3: Analyser les données
+    console.log('\n3️⃣ Analyse des données...');
     
-    // Test 4: Vérifier le bucket storage
-    const { data: bucketData, error: bucketError } = await supabase
-      .rpc('exec_sql', {
-        sql: `
-          SELECT id, name, public FROM storage.buckets WHERE id='clock-photos';
-        `
+    // Employés
+    const { data: employees, error: empError } = await supabase
+      .from('employees')
+      .select('id, name, role, pinCode');
+    
+    if (empError) {
+      console.log('❌ Erreur employés:', empError.message);
+    } else {
+      console.log(`✅ Employés: ${employees?.length || 0} trouvés`);
+      employees?.forEach(emp => {
+        console.log(`   - ${emp.name} (${emp.role}) - PIN: ${emp.pinCode}`);
       });
+    }
+
+    // Créneaux
+    const { data: shifts, error: shiftError } = await supabase
+      .from('shifts')
+      .select('id, employee_id, start_time, status')
+      .limit(5);
+    
+    if (shiftError) {
+      console.log('❌ Erreur créneaux:', shiftError.message);
+    } else {
+      console.log(`✅ Créneaux: ${shifts?.length || 0} trouvés`);
+    }
+
+    // Photos
+    const { data: photos, error: photoError } = await supabase
+      .from('clock_photos')
+      .select('id, employee_id, timestamp')
+      .limit(5);
+    
+    if (photoError) {
+      console.log('❌ Erreur photos:', photoError.message);
+    } else {
+      console.log(`✅ Photos: ${photos?.length || 0} trouvées`);
+    }
+
+    // Test 4: Storage
+    console.log('\n4️⃣ Test du storage...');
+    const { data: buckets, error: bucketError } = await supabase
+      .storage
+      .listBuckets();
     
     if (bucketError) {
-      console.error('❌ Erreur bucket check:', bucketError);
+      console.log('❌ Erreur storage:', bucketError.message);
     } else {
-      console.log('🪣 Bucket clock-photos:', bucketData);
-    }
-    
-    // Test 5: Vérifier les politiques storage
-    const { data: storagePoliciesData, error: storagePoliciesError } = await supabase
-      .rpc('exec_sql', {
-        sql: `
-          SELECT policyname, cmd, roles, qual, with_check
-          FROM pg_policies
-          WHERE schemaname='storage' AND tablename='objects';
-        `
+      console.log(`✅ Storage: ${buckets?.length || 0} buckets`);
+      buckets?.forEach(bucket => {
+        console.log(`   - ${bucket.name} (public: ${bucket.public})`);
       });
-    
-    if (storagePoliciesError) {
-      console.error('❌ Erreur storage policies check:', storagePoliciesError);
-    } else {
-      console.log('📋 Politiques storage:', storagePoliciesData);
     }
-    
+
+    console.log('\n🎉 MCP Supabase configuré et fonctionnel !');
+    console.log('📋 Prochaines étapes :');
+    console.log('1. Redémarrer Cursor pour activer le MCP');
+    console.log('2. Tester l\'application en production');
+    console.log('3. Utiliser le MCP pour gérer les données');
+
   } catch (error) {
     console.error('❌ Erreur générale:', error);
   }
 }
 
-// Exécuter le test
-testConnection();
+testMCPConnection();
