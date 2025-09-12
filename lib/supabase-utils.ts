@@ -10,7 +10,24 @@ export const employeeUtils = {
       .order('name')
     
     if (error) throw error
-    return data || []
+    
+    // Transformer les données de la base vers notre interface
+    return (data || []).map(emp => ({
+      id: emp.id,
+      name: emp.name,
+      email: emp.email,
+      position: emp.position,
+      role: emp.role,
+      isActive: emp.is_active,
+      maxHoursPerDay: emp.max_hours_per_day,
+      maxHoursPerWeek: emp.max_hours_per_week,
+      minBreakMinutes: emp.min_break_minutes,
+      pinCode: emp.pin_code,
+      photoUrl: emp.photo_url,
+      workSchedule: emp.work_schedule,
+      createdAt: emp.created_at,
+      updatedAt: emp.updated_at
+    }))
   },
 
   // Récupérer un employé par ID
@@ -22,32 +39,113 @@ export const employeeUtils = {
       .single()
     
     if (error) return null
-    return data
+    
+    // Transformer les données de la base vers notre interface
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      position: data.position,
+      role: data.role,
+      isActive: data.is_active,
+      maxHoursPerDay: data.max_hours_per_day,
+      maxHoursPerWeek: data.max_hours_per_week,
+      minBreakMinutes: data.min_break_minutes,
+      pinCode: data.pin_code,
+      photoUrl: data.photo_url,
+      workSchedule: data.work_schedule,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
   },
 
   // Créer un employé
   async create(employee: Omit<Employee, 'created_at' | 'updated_at'>): Promise<Employee> {
+    // Transformer les données de notre interface vers la base
+    const dbEmployee = {
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      position: employee.position,
+      role: employee.role,
+      is_active: employee.isActive,
+      max_hours_per_day: employee.maxHoursPerDay,
+      max_hours_per_week: employee.maxHoursPerWeek,
+      min_break_minutes: employee.minBreakMinutes,
+      pin_code: employee.pinCode,
+      photo_url: employee.photoUrl,
+      work_schedule: employee.workSchedule
+    }
+    
     const { data, error } = await supabase
       .from('employees')
-      .insert(employee)
+      .insert(dbEmployee)
       .select()
       .single()
     
     if (error) throw error
-    return data
+    
+    // Transformer les données de la base vers notre interface
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      position: data.position,
+      role: data.role,
+      isActive: data.is_active,
+      maxHoursPerDay: data.max_hours_per_day,
+      maxHoursPerWeek: data.max_hours_per_week,
+      minBreakMinutes: data.min_break_minutes,
+      pinCode: data.pin_code,
+      photoUrl: data.photo_url,
+      workSchedule: data.work_schedule,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
   },
 
   // Mettre à jour un employé
   async update(id: string, updates: Partial<Employee>): Promise<Employee> {
+    // Transformer les données de notre interface vers la base
+    const dbUpdates: any = {}
+    if (updates.name !== undefined) dbUpdates.name = updates.name
+    if (updates.email !== undefined) dbUpdates.email = updates.email
+    if (updates.position !== undefined) dbUpdates.position = updates.position
+    if (updates.role !== undefined) dbUpdates.role = updates.role
+    if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive
+    if (updates.maxHoursPerDay !== undefined) dbUpdates.max_hours_per_day = updates.maxHoursPerDay
+    if (updates.maxHoursPerWeek !== undefined) dbUpdates.max_hours_per_week = updates.maxHoursPerWeek
+    if (updates.minBreakMinutes !== undefined) dbUpdates.min_break_minutes = updates.minBreakMinutes
+    if (updates.pinCode !== undefined) dbUpdates.pin_code = updates.pinCode
+    if (updates.photoUrl !== undefined) dbUpdates.photo_url = updates.photoUrl
+    if (updates.workSchedule !== undefined) dbUpdates.work_schedule = updates.workSchedule
+    
     const { data, error } = await supabase
       .from('employees')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id)
       .select()
       .single()
     
     if (error) throw error
-    return data
+    
+    // Transformer les données de la base vers notre interface
+    return {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      position: data.position,
+      role: data.role,
+      isActive: data.is_active,
+      maxHoursPerDay: data.max_hours_per_day,
+      maxHoursPerWeek: data.max_hours_per_week,
+      minBreakMinutes: data.min_break_minutes,
+      pinCode: data.pin_code,
+      photoUrl: data.photo_url,
+      workSchedule: data.work_schedule,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    }
   },
 
   // Supprimer un employé

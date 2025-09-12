@@ -24,19 +24,45 @@ export default function AppWithSupabase() {
   
   const [view, setView] = useState<'login' | 'shifts' | 'dashboard' | 'analytics' | 'qr-codes' | 'pin-manager' | 'photo-gallery' | 'pin-debug'>('login');
   const [currentUser, setCurrentUser] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showNotification, setShowNotification] = useState(true);
+
+  // Transformer les shifts de Supabase vers notre format
+  const transformedShifts = shifts.map(shift => ({
+    id: shift.id.toString(),
+    start: new Date(shift.start_time),
+    end: shift.end_time ? new Date(shift.end_time) : new Date(),
+    breakMin: shift.break_duration || 0,
+    warnings: [],
+    employeeId: shift.employee_id,
+    employeeName: employees.find(emp => emp.id === shift.employee_id)?.name || 'Inconnu',
+    createdAt: new Date(shift.created_at),
+    updatedAt: new Date(shift.updated_at)
+  }));
+
+  // Transformer les photos de Supabase vers notre format
+  const transformedPhotos = photos.map(photo => ({
+    id: photo.id.toString(),
+    employeeId: photo.employee_id,
+    employeeName: employees.find(emp => emp.id === photo.employee_id)?.name || 'Inconnu',
+    photoData: photo.photo_data,
+    photoUrl: photo.photo_url,
+    clockType: 'in' as const,
+    timestamp: new Date(photo.timestamp),
+    shiftId: photo.shift_id?.toString()
+  }));
 
   // Calculer les créneaux d'aujourd'hui
   const today = new Date();
   const todayString = today.toISOString().split('T')[0];
-  const todayShifts = shifts.filter(shift => {
-    const startDate = new Date(shift.start_time);
+  const todayShifts = transformedShifts.filter(shift => {
+    const startDate = new Date(shift.start);
     return startDate.toISOString().split('T')[0] === todayString;
   });
 
   // Calculer les employés présents
   const presentEmployees = employees.filter(emp => 
-    emp.is_active && todayShifts.some(shift => shift.employee_id === emp.id)
+    emp.isActive && todayShifts.some(shift => shift.employeeId === emp.id)
   ).length;
 
   // Calculer les heures de la semaine
@@ -58,15 +84,19 @@ export default function AppWithSupabase() {
   const laborWarnings: LaborWarning[] = [];
   
   employees.forEach(emp => {
-    const empShifts = shifts.filter(shift => shift.employee_id === emp.id);
-    const totalHours = empShifts.reduce((total, shift) => total + (shift.total_hours || 0), 0);
+    const empShifts = transformedShifts.filter(shift => shift.employeeId === emp.id);
+    const totalHours = empShifts.reduce((total, shift) => {
+      const duration = (shift.end.getTime() - shift.start.getTime()) / (1000 * 60 * 60);
+      return total + duration - (shift.breakMin / 60);
+    }, 0);
     
-    if (totalHours > emp.max_hours_per_week) {
+    if (totalHours > emp.maxHoursPerWeek) {
       laborWarnings.push({
         employeeId: emp.id,
         employeeName: emp.name,
         type: 'max_hours_exceeded',
-        message: `${emp.name} a dépassé ses heures maximales (${totalHours.toFixed(1)}h / ${emp.max_hours_per_week}h)`
+        message: `${emp.name} a dépassé ses heures maximales (${totalHours.toFixed(1)}h / ${emp.maxHoursPerWeek}h)`,
+        code: 'MAX_HOURS_EXCEEDED'
       });
     }
   });
@@ -78,6 +108,7 @@ export default function AppWithSupabase() {
   // Fonctions de gestion des employés
   const handleSelectEmployee = (employee: Employee) => {
     setCurrentUser(employee);
+    setSelectedEmployee(employee);
     setView(employee.role === 'manager' ? 'dashboard' : 'shifts');
   };
 
@@ -86,15 +117,38 @@ export default function AppWithSupabase() {
     console.log('Mise à jour employé:', id, updates);
   };
 
-  const handleDownloadPhoto = (photoId: number) => {
+  const handleDownloadPhoto = (photo: any) => {
     // Cette fonction sera implémentée dans le hook useClockPhotos
-    console.log('Téléchargement photo:', photoId);
+    console.log('Téléchargement photo:', photo);
+  };
+
+  const handleGenerateAllQR = () => {
+    console.log('Génération de tous les QR codes');
+  };
+
+  const handleDownloadAllQR = () => {
+    console.log('Téléchargement de tous les QR codes');
   };
 
   // Fonctions de gestion des créneaux
   const handleAddShift = async (shift: Omit<Shift, 'id' | 'created_at' | 'updated_at'>) => {
     // Cette fonction sera implémentée dans le hook useShifts
     console.log('Ajout créneau:', shift);
+  };
+
+  const handleShiftAdd = (shiftData: { start: Date; end: Date; breakMin: number; warnings: LaborWarning[] }) => {
+    // Adapter les données pour handleAddShift
+    const shift: Omit<Shift, 'id' | 'created_at' | 'updated_at'> = {
+      start: shiftData.start,
+      end: shiftData.end,
+      breakMin: shiftData.breakMin,
+      warnings: shiftData.warnings,
+      employeeId: selectedEmployee?.id,
+      employeeName: selectedEmployee?.name,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    handleAddShift(shift);
   };
 
   const handleUpdateShift = async (id: number, updates: Partial<Shift>) => {
@@ -123,8 +177,7 @@ export default function AppWithSupabase() {
   };
 
   // Fonction d'import des données
-  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleImportData = (file: File) => {
     if (!file) return;
 
     const reader = new FileReader();
@@ -189,6 +242,7 @@ export default function AppWithSupabase() {
         return (
           <EmployeeSelector
             employees={employees}
+            selectedEmployee={selectedEmployee}
             onSelectEmployee={handleSelectEmployee}
           />
         );
@@ -197,13 +251,11 @@ export default function AppWithSupabase() {
         return (
           <Dashboard
             employees={employees}
-            shifts={shifts}
+            shifts={transformedShifts}
             todayShifts={todayShifts}
             presentEmployees={presentEmployees}
-            totalWeekHours={totalWeekHours}
-            laborWarnings={laborWarnings}
-            onAddShift={handleAddShift}
-            onUpdateShift={handleUpdateShift}
+            weeklyHours={totalWeekHours}
+            onNavigateToQR={() => setView('qr-codes')}
           />
         );
       
@@ -211,18 +263,23 @@ export default function AppWithSupabase() {
         return (
           <div className="space-y-6">
             <ShiftForm
-              employees={employees}
-              onAddShift={handleAddShift}
+              onShiftAdd={handleShiftAdd}
             />
             <ShiftList
-              shifts={shifts}
-              onUpdateShift={handleUpdateShift}
+              shifts={transformedShifts}
+              onShiftDelete={(id) => console.log('Suppression créneau:', id)}
             />
           </div>
         );
       
       case 'qr-codes':
-        return <QRCodeManager employees={employees} />;
+        return (
+          <QRCodeManager 
+            employees={employees} 
+            onGenerateAll={handleGenerateAllQR}
+            onDownloadAll={handleDownloadAllQR}
+          />
+        );
       
       case 'pin-manager':
         return (
@@ -235,7 +292,7 @@ export default function AppWithSupabase() {
       case 'photo-gallery':
         return (
           <PhotoGallery
-            photos={photos}
+            photos={transformedPhotos}
             onDownloadPhoto={handleDownloadPhoto}
           />
         );
@@ -247,6 +304,7 @@ export default function AppWithSupabase() {
         return (
           <EmployeeSelector
             employees={employees}
+            selectedEmployee={selectedEmployee}
             onSelectEmployee={handleSelectEmployee}
           />
         );
@@ -262,6 +320,7 @@ export default function AppWithSupabase() {
         lastSave={new Date()}
         onExport={handleExportData}
         onImport={handleImportData}
+        onDismiss={() => setShowNotification(false)}
       />
       
       {currentUser && (
@@ -271,8 +330,6 @@ export default function AppWithSupabase() {
             setCurrentUser(null);
             setView('login');
           }}
-          onNavigate={setView}
-          currentView={view}
         />
       )}
       

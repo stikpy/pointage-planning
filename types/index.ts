@@ -1,7 +1,9 @@
 export interface LaborWarning {
-  type: 'error' | 'warning';
+  type: 'error' | 'warning' | 'max_hours_exceeded';
   message: string;
   code: string;
+  employeeId?: string;
+  employeeName?: string;
 }
 
 export interface Shift {

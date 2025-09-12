@@ -12,19 +12,19 @@ export interface Employee {
   email: string
   position: string
   role: 'employee' | 'manager'
-  is_active: boolean
-  max_hours_per_day: number
-  max_hours_per_week: number
-  min_break_minutes: number
-  pin_code?: string
-  photo_url?: string
-  work_schedule: {
+  isActive: boolean
+  maxHoursPerDay: number
+  maxHoursPerWeek: number
+  minBreakMinutes: number
+  pinCode?: string
+  photoUrl?: string
+  workSchedule: {
     startTime: string
     endTime: string
     days: number[]
   }
-  created_at: string
-  updated_at: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Shift {
