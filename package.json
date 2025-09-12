@@ -8,7 +8,16 @@
     "start": "next start",
     "lint": "next lint",
     "setup-db": "node scripts/setup-database.js",
-    "test-supabase": "node scripts/test-supabase.js"
+    "setup-supabase": "node scripts/setup-supabase-tables.js",
+    "create-tables": "node scripts/create-tables-direct.js",
+    "setup-manual": "node scripts/create-tables-rest-api.js",
+    "test-supabase": "node scripts/test-supabase.js",
+    "test-simple": "node scripts/test-simple.js",
+    "create-mcp": "node scripts/create-tables-mcp.js",
+    "create-rest": "node scripts/create-tables-rest-direct.js",
+    "create-http": "node scripts/create-tables-http.js",
+    "test-mcp": "node scripts/test-mcp-connection.js",
+    "setup-storage": "node scripts/setup-storage.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

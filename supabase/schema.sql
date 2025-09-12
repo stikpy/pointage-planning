@@ -191,5 +191,5 @@ INSERT INTO public.employees (id, name, email, position, role, pin_code, work_sc
 
 -- Insertion des paramètres par défaut
 INSERT INTO public.app_settings (id, value, description) VALUES
-('app_config', '{"version": "1.0.0", "maintenance_mode": false, "qr_session_duration": 5}'::jsonb, 'Configuration générale de l\'application'),
+('app_config', '{"version": "1.0.0", "maintenance_mode": false, "qr_session_duration": 5}'::jsonb, 'Configuration générale de l''application'),
 ('work_schedule_default', '{"startTime": "08:00", "endTime": "18:00", "days": [1,2,3,4,5]}'::jsonb, 'Horaires de travail par défaut');

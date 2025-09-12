@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, AlertTriangle, Camera, User, Shield } from 'lucide-react';
 import { validateClockSession, validateQRDataFromURL } from '../../../utils/secureQR';
 import IdentityVerification from '../../../components/IdentityVerification';
+import { supabase } from '../../../lib/supabase';
 
 interface ClockPageProps {
   params: {
@@ -68,41 +69,26 @@ export default function ClockPage({ params }: ClockPageProps) {
       console.log('🔍 Début de la validation de session...');
       setIsValidating(true);
       
-      // VERSION SIMPLIFIÉE POUR DEBUG - Force l'affichage de l'interface
-      console.log('🔍 Mode debug - Chargement direct de l\'employé...');
+      // Charger l'employé depuis Supabase
+      console.log('🔍 Chargement de l\'employé depuis Supabase...');
+      const { data: foundEmployee, error: empError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', params.employeeId)
+        .single();
       
-      // Charger les données de l'employé directement
-      const appData = JSON.parse(localStorage.getItem('shift-management-app') || '{}');
-      const employees = appData.employees || [];
-      
-      // S'assurer que les codes PIN sont initialisés
-      const defaultPins: { [key: string]: string } = {
-        'emp_1': '1234', // Marie Dubois
-        'emp_2': '5678', // Jean Martin
-        'emp_3': '9012', // Sophie Laurent
-        'emp_4': '3456', // Pierre Moreau
-        'emp_5': '7890'  // Claire Petit
-      };
-      
-      // Mettre à jour les employés avec les codes PIN si nécessaire
-      const updatedEmployees = employees.map((emp: any) => ({
-        ...emp,
-        pinCode: emp.pinCode || defaultPins[emp.id] || '0000'
-      }));
-      
-      const foundEmployee = updatedEmployees.find((emp: any) => emp.id === params.employeeId);
-      
-      console.log('🔍 Debug Clock Page:');
-      console.log('- Employee ID recherché:', params.employeeId);
-      console.log('- Employés chargés:', employees);
-      console.log('- Employé trouvé:', foundEmployee);
-      console.log('- PIN de l\'employé trouvé:', foundEmployee?.pinCode);
-      
-      if (!foundEmployee) {
+      if (empError || !foundEmployee) {
+        console.error('❌ Erreur chargement employé:', empError);
         setError('Employé non trouvé.');
         setIsValidating(false);
         return;
       }
+      
+      console.log('✅ Employé trouvé:', foundEmployee.name);
+      console.log('- ID:', foundEmployee.id);
+      console.log('- PIN:', foundEmployee.pin_code);
+      console.log('- Rôle:', foundEmployee.role);
+      console.log('- Horaires:', foundEmployee.work_schedule);
 
       // Créer une session factice pour le debug
       const fakeSession = {
@@ -117,7 +103,6 @@ export default function ClockPage({ params }: ClockPageProps) {
       setClockSession(fakeSession);
       setIsValidating(false);
       
-      console.log('✅ Employé chargé:', foundEmployee.name);
       console.log('✅ Session factice créée:', fakeSession);
       
       // Demander la vérification d'identité
@@ -137,42 +122,43 @@ export default function ClockPage({ params }: ClockPageProps) {
       if (!employee || !clockSession) return;
 
       // Vérifier si l'employé est déjà en cours de travail
-      const appData = JSON.parse(localStorage.getItem('shift-management-app') || '{}');
-      const currentShifts = appData.shifts || [];
+      const { data: activeShifts, error: shiftError } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('employee_id', employee.id)
+        .is('end_time', null)
+        .eq('status', 'active');
       
-      const activeShift = currentShifts.find((shift: any) => 
-        shift.employeeId === employee.id && !shift.end
-      );
+      if (shiftError) {
+        console.error('❌ Erreur vérification créneaux:', shiftError);
+        setError('Erreur lors de la vérification des créneaux.');
+        return;
+      }
 
-      if (activeShift) {
+      if (activeShifts && activeShifts.length > 0) {
         setError('Vous êtes déjà en cours de travail. Utilisez "Pointer la sortie".');
         return;
       }
 
-      // Créer un nouveau créneau
-      const newShift = {
-        id: Date.now().toString(),
-        employeeId: employee.id,
-        employeeName: employee.name,
-        start: new Date().toISOString(),
-        end: null,
-        breakMin: 0,
-        warnings: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      // Mettre à jour les données
-      const updatedData = {
-        ...appData,
-        shifts: [...currentShifts, newShift]
-      };
-
-      localStorage.setItem('shift-management-app', JSON.stringify(updatedData));
+      // Créer un nouveau créneau dans Supabase
+      const { data: newShift, error: insertError } = await supabase
+        .from('shifts')
+        .insert({
+          employee_id: employee.id,
+          start_time: new Date().toISOString(),
+          status: 'active',
+          notes: 'Pointage d\'entrée'
+        })
+        .select()
+        .single();
       
-      // Nettoyer la session
-      localStorage.removeItem(`clock_session_${params.employeeId}`);
+      if (insertError) {
+        console.error('❌ Erreur insertion créneau:', insertError);
+        setError('Erreur lors de l\'enregistrement du pointage.');
+        return;
+      }
       
+      console.log('✅ Créneau créé:', newShift);
       setSuccess(`Pointage d'entrée enregistré pour ${employee.name}`);
       
       // Rediriger après 3 secondes
@@ -191,36 +177,43 @@ export default function ClockPage({ params }: ClockPageProps) {
       if (!employee || !clockSession) return;
 
       // Trouver le créneau actif
-      const appData = JSON.parse(localStorage.getItem('shift-management-app') || '{}');
-      const currentShifts = appData.shifts || [];
+      const { data: activeShifts, error: shiftError } = await supabase
+        .from('shifts')
+        .select('*')
+        .eq('employee_id', employee.id)
+        .is('end_time', null)
+        .eq('status', 'active');
       
-      const activeShift = currentShifts.find((shift: any) => 
-        shift.employeeId === employee.id && !shift.end
-      );
+      if (shiftError) {
+        console.error('❌ Erreur vérification créneaux:', shiftError);
+        setError('Erreur lors de la vérification des créneaux.');
+        return;
+      }
 
-      if (!activeShift) {
+      if (!activeShifts || activeShifts.length === 0) {
         setError('Aucun créneau actif trouvé. Utilisez "Pointer l\'entrée".');
         return;
       }
 
-      // Mettre à jour le créneau
-      const updatedShifts = currentShifts.map((shift: any) => 
-        shift.id === activeShift.id 
-          ? { ...shift, end: new Date().toISOString(), updatedAt: new Date().toISOString() }
-          : shift
-      );
+      const activeShift = activeShifts[0];
 
-      // Mettre à jour les données
-      const updatedData = {
-        ...appData,
-        shifts: updatedShifts
-      };
-
-      localStorage.setItem('shift-management-app', JSON.stringify(updatedData));
+      // Mettre à jour le créneau dans Supabase
+      const { error: updateError } = await supabase
+        .from('shifts')
+        .update({
+          end_time: new Date().toISOString(),
+          status: 'completed',
+          notes: activeShift.notes ? `${activeShift.notes} - Pointage de sortie` : 'Pointage de sortie'
+        })
+        .eq('id', activeShift.id);
       
-      // Nettoyer la session
-      localStorage.removeItem(`clock_session_${params.employeeId}`);
+      if (updateError) {
+        console.error('❌ Erreur mise à jour créneau:', updateError);
+        setError('Erreur lors de l\'enregistrement du pointage.');
+        return;
+      }
       
+      console.log('✅ Créneau mis à jour:', activeShift.id);
       setSuccess(`Pointage de sortie enregistré pour ${employee.name}`);
       
       // Rediriger après 3 secondes
@@ -234,28 +227,66 @@ export default function ClockPage({ params }: ClockPageProps) {
     }
   };
 
-  const handleIdentityVerified = (photoData?: string, timestamp?: Date) => {
+  const handleIdentityVerified = async (photoData?: string, timestamp?: Date) => {
     setNeedsIdentityVerification(false);
     
     // La photo est maintenant obligatoire
     if (photoData && timestamp) {
-      const clockPhoto = {
-        id: `photo_${Date.now()}`,
-        employeeId: params.employeeId,
-        employeeName: employee?.name || 'Inconnu',
-        photoData,
-        timestamp,
-        clockType: 'in' as const, // Pour l'instant, on assume que c'est une entrée
-        shiftId: `shift_${Date.now()}`
-      };
-      
-      // Sauvegarder dans localStorage
-      const existingPhotos = JSON.parse(localStorage.getItem('clock-photos') || '[]');
-      existingPhotos.push(clockPhoto);
-      localStorage.setItem('clock-photos', JSON.stringify(existingPhotos));
-      
-      // Afficher un message de succès
-      setSuccess('Pointage enregistré avec photo !');
+      try {
+        // Convertir la photo base64 en blob
+        const response = await fetch(photoData);
+        const blob = await response.blob();
+        
+        // Créer un nom de fichier unique
+        const fileName = `clock_photo_${params.employeeId}_${Date.now()}.jpg`;
+        
+        // Uploader vers Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('clock-photos')
+          .upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            cacheControl: '3600'
+          });
+        
+        if (uploadError) {
+          console.error('❌ Erreur upload photo:', uploadError);
+          setError('Erreur lors de l\'enregistrement de la photo.');
+          return;
+        }
+        
+        // Obtenir l'URL publique de la photo
+        const { data: urlData } = supabase.storage
+          .from('clock-photos')
+          .getPublicUrl(fileName);
+        
+        // Sauvegarder les métadonnées de la photo dans la base de données
+        const { error: dbError } = await supabase
+          .from('clock_photos')
+          .insert({
+            employee_id: params.employeeId,
+            photo_data: photoData, // Garder la version base64 pour compatibilité
+            photo_url: urlData.publicUrl,
+            timestamp: timestamp.toISOString(),
+            metadata: {
+              fileName,
+              uploadTime: new Date().toISOString(),
+              employeeName: employee?.name || 'Inconnu'
+            }
+          });
+        
+        if (dbError) {
+          console.error('❌ Erreur sauvegarde métadonnées:', dbError);
+          setError('Erreur lors de l\'enregistrement des métadonnées de la photo.');
+          return;
+        }
+        
+        console.log('✅ Photo uploadée:', urlData.publicUrl);
+        setSuccess('Pointage enregistré avec photo !');
+        
+      } catch (error) {
+        console.error('❌ Erreur traitement photo:', error);
+        setError('Erreur lors du traitement de la photo.');
+      }
     } else {
       setError('Photo de pointage requise pour valider l\'identité');
     }
@@ -355,11 +386,37 @@ export default function ClockPage({ params }: ClockPageProps) {
   }
 
   // Vérifier si l'employé est déjà en cours de travail
-  const appData = JSON.parse(localStorage.getItem('shift-management-app') || '{}');
-  const currentShifts = appData.shifts || [];
-  const activeShift = currentShifts.find((shift: any) => 
-    shift.employeeId === employee.id && !shift.end
-  );
+  const [activeShift, setActiveShift] = useState<any>(null);
+  const [loadingShift, setLoadingShift] = useState(true);
+
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      if (!employee) return;
+      
+      try {
+        const { data: shifts, error } = await supabase
+          .from('shifts')
+          .select('*')
+          .eq('employee_id', employee.id)
+          .is('end_time', null)
+          .eq('status', 'active')
+          .order('start_time', { ascending: false })
+          .limit(1);
+        
+        if (error) {
+          console.error('❌ Erreur vérification créneaux:', error);
+        } else {
+          setActiveShift(shifts && shifts.length > 0 ? shifts[0] : null);
+        }
+      } catch (error) {
+        console.error('❌ Erreur vérification créneaux:', error);
+      } finally {
+        setLoadingShift(false);
+      }
+    };
+
+    checkActiveShift();
+  }, [employee]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -388,7 +445,12 @@ export default function ClockPage({ params }: ClockPageProps) {
         )}
 
         <div className="space-y-4">
-          {activeShift ? (
+          {loadingShift ? (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+              <p className="text-gray-600">Vérification des créneaux...</p>
+            </div>
+          ) : activeShift ? (
             <div>
               <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-md">
                 <div className="flex items-center mb-2">
@@ -396,8 +458,13 @@ export default function ClockPage({ params }: ClockPageProps) {
                   <span className="font-medium text-orange-800">En cours de travail</span>
                 </div>
                 <p className="text-sm text-orange-700">
-                  Début: {new Date(activeShift.start).toLocaleTimeString()}
+                  Début: {new Date(activeShift.start_time).toLocaleTimeString()}
                 </p>
+                {activeShift.total_hours && (
+                  <p className="text-sm text-orange-700">
+                    Durée: {activeShift.total_hours.toFixed(2)}h
+                  </p>
+                )}
               </div>
               
               <button
