@@ -234,8 +234,14 @@ export default function ClockPage({ params }: ClockPageProps) {
     if (photoData && timestamp) {
       try {
         // Convertir la photo base64 en blob
-        const response = await fetch(photoData);
-        const blob = await response.blob();
+        const base64Data = photoData.split(',')[1]; // Enlever le préfixe data:image/jpeg;base64,
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
         
         // Créer un nom de fichier unique
         const fileName = `clock_photo_${params.employeeId}_${Date.now()}.jpg`;
