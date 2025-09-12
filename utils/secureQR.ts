@@ -52,7 +52,7 @@ export const createClockSession = (employeeId: string): string => {
   
   // Encoder les données directement dans l'URL
   const encodedData = btoa(JSON.stringify(qrData));
-  return `https://6f0667cc8e66.ngrok-free.app/clock/${employeeId}?data=${encodedData}`;
+  return `https://pointage-planning.vercel.app/clock/${employeeId}?data=${encodedData}`;
 };
 
 export const validateQRDataFromURL = (encodedData: string): { isValid: boolean; session?: SecureQRData; error?: string } => {
