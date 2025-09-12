@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ztgqzlrvrgnvilkipznr.supabase.co'
-// Solution temporaire : utiliser la clé de service pour bypasser RLS
-const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key'
+// Utiliser les nouvelles clés API Supabase
+// En production, utiliser la clé secrète pour bypasser RLS temporairement
+const supabaseAnonKey = process.env.NODE_ENV === 'production' 
+  ? 'sb_secret_kYJzfGKahg7cgWnYKR8WVw_46EjlJLl' // Clé secrète pour bypasser RLS
+  : 'sb_publishable_RnLS-wVof-pbR7Z2d-xyJg_bxYUEbDd' // Clé publique pour développement
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
