@@ -5,6 +5,7 @@ import { Clock, CheckCircle, XCircle, AlertTriangle, Camera, User, Shield } from
 import { validateClockSession, validateQRDataFromURL } from '../../../utils/secureQR';
 import IdentityVerification from '../../../components/IdentityVerification';
 import { supabase } from '../../../lib/supabase';
+import { getEmployee, getActiveShift, createShift, updateShift, createClockPhoto } from '../../../lib/api-client';
 
 interface ClockPageProps {
   params: {
@@ -72,20 +73,8 @@ export default function ClockPage({ params }: ClockPageProps) {
       if (!employee) return;
       
       try {
-        const { data: shifts, error } = await supabase
-          .from('shifts')
-          .select('*')
-          .eq('employee_id', employee.id)
-          .is('end_time', null)
-          .eq('status', 'active')
-          .order('start_time', { ascending: false })
-          .limit(1);
-        
-        if (error) {
-          console.error('❌ Erreur vérification créneaux:', error);
-        } else {
-          setActiveShift(shifts && shifts.length > 0 ? shifts[0] : null);
-        }
+        const shift = await getActiveShift(employee.id);
+        setActiveShift(shift);
       } catch (error) {
         console.error('❌ Erreur vérification créneaux:', error);
       } finally {
@@ -101,16 +90,12 @@ export default function ClockPage({ params }: ClockPageProps) {
       console.log('🔍 Début de la validation de session...');
       setIsValidating(true);
       
-      // Charger l'employé depuis Supabase
-      console.log('🔍 Chargement de l\'employé depuis Supabase...');
-      const { data: foundEmployee, error: empError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', params.employeeId)
-        .single();
+      // Charger l'employé depuis l'API
+      console.log('🔍 Chargement de l\'employé depuis l\'API...');
+      const foundEmployee = await getEmployee(params.employeeId);
       
-      if (empError || !foundEmployee) {
-        console.error('❌ Erreur chargement employé:', empError);
+      if (!foundEmployee) {
+        console.error('❌ Erreur chargement employé: Employé non trouvé');
         setError('Employé non trouvé.');
         setIsValidating(false);
         return;
@@ -154,38 +139,22 @@ export default function ClockPage({ params }: ClockPageProps) {
       if (!employee || !clockSession) return;
 
       // Vérifier si l'employé est déjà en cours de travail
-      const { data: activeShifts, error: shiftError } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('employee_id', employee.id)
-        .is('end_time', null)
-        .eq('status', 'active');
+      const activeShift = await getActiveShift(employee.id);
       
-      if (shiftError) {
-        console.error('❌ Erreur vérification créneaux:', shiftError);
-        setError('Erreur lors de la vérification des créneaux.');
-        return;
-      }
-
-      if (activeShifts && activeShifts.length > 0) {
+      if (activeShift) {
         setError('Vous êtes déjà en cours de travail. Utilisez "Pointer la sortie".');
         return;
       }
 
-      // Créer un nouveau créneau dans Supabase
-      const { data: newShift, error: insertError } = await supabase
-        .from('shifts')
-        .insert({
-          employee_id: employee.id,
-          start_time: new Date().toISOString(),
-          status: 'active',
-          notes: 'Pointage d\'entrée'
-        })
-        .select()
-        .single();
+      // Créer un nouveau créneau via l'API
+      const newShift = await createShift({
+        employee_id: employee.id,
+        start_time: new Date().toISOString(),
+        status: 'active',
+        notes: 'Pointage d\'entrée'
+      });
       
-      if (insertError) {
-        console.error('❌ Erreur insertion créneau:', insertError);
+      if (!newShift) {
         setError('Erreur lors de l\'enregistrement du pointage.');
         return;
       }
@@ -209,38 +178,21 @@ export default function ClockPage({ params }: ClockPageProps) {
       if (!employee || !clockSession) return;
 
       // Trouver le créneau actif
-      const { data: activeShifts, error: shiftError } = await supabase
-        .from('shifts')
-        .select('*')
-        .eq('employee_id', employee.id)
-        .is('end_time', null)
-        .eq('status', 'active');
+      const activeShift = await getActiveShift(employee.id);
       
-      if (shiftError) {
-        console.error('❌ Erreur vérification créneaux:', shiftError);
-        setError('Erreur lors de la vérification des créneaux.');
-        return;
-      }
-
-      if (!activeShifts || activeShifts.length === 0) {
+      if (!activeShift) {
         setError('Aucun créneau actif trouvé. Utilisez "Pointer l\'entrée".');
         return;
       }
 
-      const activeShift = activeShifts[0];
-
-      // Mettre à jour le créneau dans Supabase
-      const { error: updateError } = await supabase
-        .from('shifts')
-        .update({
-          end_time: new Date().toISOString(),
-          status: 'completed',
-          notes: activeShift.notes ? `${activeShift.notes} - Pointage de sortie` : 'Pointage de sortie'
-        })
-        .eq('id', activeShift.id);
+      // Mettre à jour le créneau via l'API
+      const updatedShift = await updateShift(activeShift.id, {
+        end_time: new Date().toISOString(),
+        status: 'completed',
+        notes: activeShift.notes ? `${activeShift.notes} - Pointage de sortie` : 'Pointage de sortie'
+      });
       
-      if (updateError) {
-        console.error('❌ Erreur mise à jour créneau:', updateError);
+      if (!updatedShift) {
         setError('Erreur lors de l\'enregistrement du pointage.');
         return;
       }
@@ -297,23 +249,20 @@ export default function ClockPage({ params }: ClockPageProps) {
           .from('clock-photos')
           .getPublicUrl(fileName);
         
-        // Sauvegarder les métadonnées de la photo dans la base de données
-        const { error: dbError } = await supabase
-          .from('clock_photos')
-          .insert({
-            employee_id: params.employeeId,
-            photo_data: photoData, // Garder la version base64 pour compatibilité
-            photo_url: urlData.publicUrl,
-            timestamp: timestamp.toISOString(),
-            metadata: {
-              fileName,
-              uploadTime: new Date().toISOString(),
-              employeeName: employee?.name || 'Inconnu'
-            }
-          });
+        // Sauvegarder les métadonnées de la photo via l'API
+        const photoRecord = await createClockPhoto({
+          employee_id: params.employeeId,
+          photo_data: photoData, // Garder la version base64 pour compatibilité
+          photo_url: urlData.publicUrl,
+          timestamp: timestamp.toISOString(),
+          metadata: {
+            fileName,
+            uploadTime: new Date().toISOString(),
+            employeeName: employee?.name || 'Inconnu'
+          }
+        });
         
-        if (dbError) {
-          console.error('❌ Erreur sauvegarde métadonnées:', dbError);
+        if (!photoRecord) {
           setError('Erreur lors de l\'enregistrement des métadonnées de la photo.');
           return;
         }
