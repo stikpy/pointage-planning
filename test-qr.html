@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test QR Code</title>
+</head>
+<body>
+    <h1>Test QR Code Validation</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Copier les fonctions de validation
+        function generateSignature(employeeId, timestamp) {
+            const secret = 'pointage-secret-key-2024';
+            const data = `${employeeId}-${timestamp}-${secret}`;
+            
+            let hash = 0;
+            for (let i = 0; i < data.length; i++) {
+                const char = data.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16);
+        }
+
+        function validateQRDataFromURL(encodedData) {
+            try {
+                console.log('Décodage des données:', encodedData);
+                const qrData = JSON.parse(atob(encodedData));
+                console.log('Données décodées:', qrData);
+                
+                // Vérifier la signature
+                const expectedSignature = generateSignature(qrData.employeeId, qrData.timestamp);
+                console.log('Signature attendue:', expectedSignature);
+                console.log('Signature reçue:', qrData.signature);
+                
+                const isValid = qrData.signature === expectedSignature;
+                console.log('Signature valide:', isValid);
+                
+                return { isValid, session: qrData };
+            } catch (error) {
+                console.error('Erreur de décodage:', error);
+                return { isValid: false, error: 'QR code invalide' };
+            }
+        }
+
+        // Test avec les données du QR code
+        const qrData = 'eyJlbXBsb3llZUlkIjoiZW1wXzEiLCJ0aW1lc3RhbXAiOjE3NTc3MDk3MTk1MDksInNpZ25hdHVyZSI6IjQ4ZTE2YjU2IiwiYWN0aW9uIjoiY2xvY2sifQ==';
+        
+        console.log('Test de validation QR code...');
+        const result = validateQRDataFromURL(qrData);
+        
+        document.getElementById('result').innerHTML = `
+            <h2>Résultat:</h2>
+            <p>Valide: ${result.isValid}</p>
+            <p>Session: ${JSON.stringify(result.session, null, 2)}</p>
+            <p>Erreur: ${result.error || 'Aucune'}</p>
+        `;
+        
+        console.log('Résultat final:', result);
+    </script>
+</body>
+</html>
