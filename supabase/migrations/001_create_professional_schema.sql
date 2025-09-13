@@ -8,7 +8,7 @@ CREATE TYPE clock_event_type AS ENUM ('clock_in', 'clock_out', 'break_start', 'b
 CREATE TYPE badge_type AS ENUM ('nfc', 'qr_code', 'barcode', 'rfid');
 
 -- ===== ORGANISATIONS ET HIÉRARCHIE =====
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   settings JSONB DEFAULT '{}',
@@ -16,7 +16,7 @@ CREATE TABLE organizations (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE departments (
+CREATE TABLE IF NOT EXISTS departments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE departments (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE teams (
+CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   department_id UUID REFERENCES departments(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE teams (
 );
 
 -- ===== UTILISATEURS AVEC RÔLES =====
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255), -- Pour l'authentification Supabase
@@ -60,7 +60,7 @@ ALTER TABLE teams ADD CONSTRAINT fk_teams_lead
   FOREIGN KEY (team_lead_id) REFERENCES users(id) ON DELETE SET NULL;
 
 -- ===== SYSTÈME DE PLANNING =====
-CREATE TABLE planning_templates (
+CREATE TABLE IF NOT EXISTS planning_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE planning_templates (
 );
 
 -- ===== CRÉNEAUX ET POINTAGE =====
-CREATE TABLE shifts (
+CREATE TABLE IF NOT EXISTS shifts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES users(id) ON DELETE CASCADE,
   template_id UUID REFERENCES planning_templates(id) ON DELETE SET NULL,
@@ -87,7 +87,7 @@ CREATE TABLE shifts (
 );
 
 -- ===== BADGES ET AUTHENTIFICATION =====
-CREATE TABLE badges (
+CREATE TABLE IF NOT EXISTS badges (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES users(id) ON DELETE CASCADE,
   badge_type badge_type NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE badges (
 );
 
 -- ===== ÉVÉNEMENTS DE POINTAGE =====
-CREATE TABLE clock_events (
+CREATE TABLE IF NOT EXISTS clock_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES users(id) ON DELETE CASCADE,
   shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
@@ -112,7 +112,7 @@ CREATE TABLE clock_events (
 );
 
 -- ===== PHOTOS DE POINTAGE (COMPATIBILITÉ) =====
-CREATE TABLE clock_photos (
+CREATE TABLE IF NOT EXISTS clock_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES users(id) ON DELETE CASCADE,
   shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
@@ -124,7 +124,7 @@ CREATE TABLE clock_photos (
 );
 
 -- ===== SESSIONS DE POINTAGE (COMPATIBILITÉ) =====
-CREATE TABLE clock_sessions (
+CREATE TABLE IF NOT EXISTS clock_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   employee_id UUID REFERENCES users(id) ON DELETE CASCADE,
   qr_data JSONB,
@@ -136,7 +136,7 @@ CREATE TABLE clock_sessions (
 );
 
 -- ===== PARAMÈTRES DE L'APPLICATION =====
-CREATE TABLE app_settings (
+CREATE TABLE IF NOT EXISTS app_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   key VARCHAR(255) NOT NULL,
@@ -287,14 +287,14 @@ INSERT INTO teams (id, department_id, name) VALUES
 
 -- Utilisateurs de test (avec mots de passe 'password123')
 INSERT INTO users (id, email, role, organization_id, department_id, team_id, profile, is_active) VALUES 
-  ('admin-0000-0000-0000-000000000001', 'admin@lebistrot.com', 'super_admin', '00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '{"firstName": "Super", "lastName": "Admin", "position": "Super Administrateur"}', true),
-  ('admin-0000-0000-0000-000000000002', 'admin@cafecentral.com', 'admin', '00000000-0000-0000-0000-000000000002', '33333333-3333-3333-3333-333333333333', null, '{"firstName": "Admin", "lastName": "Central", "position": "Administrateur"}', true),
-  ('manager-0000-0000-0000-000000000001', 'manager@lebistrot.com', 'manager', '00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '{"firstName": "Marie", "lastName": "Dubois", "position": "Chef de Cuisine"}', true),
-  ('user-0000-0000-0000-000000000001', 'jean@lebistrot.com', 'user', '00000000-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '{"firstName": "Jean", "lastName": "Martin", "position": "Serveur"}', true);
+  ('00000000-0000-0000-0000-000000000001', 'admin@lebistrot.com', 'super_admin', '00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '{"firstName": "Super", "lastName": "Admin", "position": "Super Administrateur"}', true),
+  ('00000000-0000-0000-0000-000000000002', 'admin@cafecentral.com', 'admin', '00000000-0000-0000-0000-000000000002', '33333333-3333-3333-3333-333333333333', null, '{"firstName": "Admin", "lastName": "Central", "position": "Administrateur"}', true),
+  ('00000000-0000-0000-0000-000000000003', 'manager@lebistrot.com', 'manager', '00000000-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '{"firstName": "Marie", "lastName": "Dubois", "position": "Chef de Cuisine"}', true),
+  ('00000000-0000-0000-0000-000000000004', 'jean@lebistrot.com', 'user', '00000000-0000-0000-0000-000000000001', '22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '{"firstName": "Jean", "lastName": "Martin", "position": "Serveur"}', true);
 
 -- Mettre à jour les managers des départements
-UPDATE departments SET manager_id = 'manager-0000-0000-0000-000000000001' WHERE id = '11111111-1111-1111-1111-111111111111';
-UPDATE teams SET team_lead_id = 'manager-0000-0000-0000-000000000001' WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+UPDATE departments SET manager_id = '00000000-0000-0000-0000-000000000003' WHERE id = '11111111-1111-1111-1111-111111111111';
+UPDATE teams SET team_lead_id = '00000000-0000-0000-0000-000000000003' WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 -- ===== COMMENTAIRES =====
 COMMENT ON TABLE organizations IS 'Organisations multi-tenant du système';

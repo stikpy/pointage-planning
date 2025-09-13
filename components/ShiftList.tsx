@@ -50,9 +50,9 @@ export default function ShiftList({ shifts, onShiftDelete }: ShiftListProps) {
         return startB.getTime() - startA.getTime();
       case 'duration':
         const startDateA = a.start instanceof Date ? a.start : new Date(a.start);
-        const endDateA = a.end instanceof Date ? a.end : new Date(a.end);
+        const endDateA = a.end instanceof Date ? a.end : (a.end ? new Date(a.end) : new Date());
         const startDateB = b.start instanceof Date ? b.start : new Date(b.start);
-        const endDateB = b.end instanceof Date ? b.end : new Date(b.end);
+        const endDateB = b.end instanceof Date ? b.end : (b.end ? new Date(b.end) : new Date());
         const durationA = calculateDuration(startDateA, endDateA, a.breakMin);
         const durationB = calculateDuration(startDateB, endDateB, b.breakMin);
         return durationB.work - durationA.work;
@@ -119,7 +119,7 @@ export default function ShiftList({ shifts, onShiftDelete }: ShiftListProps) {
         ) : (
           sortedShifts.map((shift) => {
             const startDate = shift.start instanceof Date ? shift.start : new Date(shift.start);
-            const endDate = shift.end instanceof Date ? shift.end : new Date(shift.end);
+            const endDate = shift.end instanceof Date ? shift.end : (shift.end ? new Date(shift.end) : new Date());
             const duration = calculateDuration(startDate, endDate, shift.breakMin);
             const hasErrors = shift.warnings.some(w => w.type === 'error');
             const hasWarnings = shift.warnings.some(w => w.type === 'warning');

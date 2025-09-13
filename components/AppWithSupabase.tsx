@@ -35,7 +35,8 @@ export default function AppWithSupabase() {
     breakMin: shift.break_duration || 0,
     warnings: [],
     employeeId: shift.employee_id,
-    employeeName: employees.find(emp => emp.id === shift.employee_id)?.name || 'Inconnu',
+    status: shift.status as 'scheduled' | 'active' | 'completed' | 'cancelled',
+    metadata: {},
     createdAt: new Date(shift.created_at),
     updatedAt: new Date(shift.updated_at)
   }));
@@ -143,8 +144,9 @@ export default function AppWithSupabase() {
       end: shiftData.end,
       breakMin: shiftData.breakMin,
       warnings: shiftData.warnings,
-      employeeId: selectedEmployee?.id,
-      employeeName: selectedEmployee?.name,
+      employeeId: selectedEmployee?.id || '',
+      status: 'scheduled',
+      metadata: {},
       createdAt: new Date(),
       updatedAt: new Date()
     };

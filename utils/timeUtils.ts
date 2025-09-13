@@ -116,7 +116,7 @@ export function calculateWeeklyStats(shifts: Shift[]): WeeklyStats {
   
   const totalHours = weekShifts.reduce((sum, shift) => {
     const startDate = shift.start instanceof Date ? shift.start : new Date(shift.start);
-    const endDate = shift.end instanceof Date ? shift.end : new Date(shift.end);
+    const endDate = shift.end instanceof Date ? shift.end : (shift.end ? new Date(shift.end) : new Date());
     return sum + calculateEffectiveHours(startDate, endDate, shift.breakMin);
   }, 0);
   
@@ -153,7 +153,7 @@ export function calculateDashboardStats(shifts: Shift[]): {
   
   const totalHours = shifts.reduce((sum, shift) => {
     const startDate = shift.start instanceof Date ? shift.start : new Date(shift.start);
-    const endDate = shift.end instanceof Date ? shift.end : new Date(shift.end);
+    const endDate = shift.end instanceof Date ? shift.end : (shift.end ? new Date(shift.end) : new Date());
     return sum + calculateEffectiveHours(startDate, endDate, shift.breakMin);
   }, 0);
   
@@ -268,8 +268,9 @@ export function createShift(
     end,
     breakMin,
     warnings: validation.warnings,
-    employeeId,
-    employeeName,
+    employeeId: employeeId || '',
+    status: 'scheduled',
+    metadata: {},
     createdAt: new Date(),
     updatedAt: new Date()
   };
