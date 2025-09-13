@@ -132,7 +132,8 @@ export default function PlanningCalendar({
     const newStart = new Date(targetDate);
     newStart.setHours(targetHour, 0, 0, 0);
     
-    const duration = new Date(draggedShift.end).getTime() - new Date(draggedShift.start).getTime();
+    const endTime = draggedShift.end || new Date(draggedShift.start.getTime() + 8 * 60 * 60 * 1000);
+    const duration = new Date(endTime).getTime() - new Date(draggedShift.start).getTime();
     const newEnd = new Date(newStart.getTime() + duration);
 
     onShiftUpdate(draggedShift.id, {
@@ -295,7 +296,7 @@ export default function PlanningCalendar({
                   {shiftsForHour.map(shift => {
                     const user = users.find(u => u.id === shift.employeeId);
                     const startHour = new Date(shift.start).getHours();
-                    const endHour = new Date(shift.end).getHours();
+                    const endHour = shift.end ? new Date(shift.end).getHours() : new Date(shift.start).getHours() + 8;
                     const height = (endHour - startHour) * 48; // 48px par heure
                     
                     return (
@@ -322,12 +323,12 @@ export default function PlanningCalendar({
                         </div>
                         <div className="text-xs opacity-75">
                           {new Date(shift.start).toLocaleTimeString('fr-FR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })} - {new Date(shift.end).toLocaleTimeString('fr-FR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })} - {shift.end ? new Date(shift.end).toLocaleTimeString('fr-FR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      }) : 'En cours'}
                         </div>
                       </div>
                     );
@@ -409,12 +410,12 @@ export default function PlanningCalendar({
                       </div>
                       <div className="text-xs opacity-75">
                         {new Date(shift.start).toLocaleTimeString('fr-FR', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })} - {new Date(shift.end).toLocaleTimeString('fr-FR', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })} - {shift.end ? new Date(shift.end).toLocaleTimeString('fr-FR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      }) : 'En cours'}
                       </div>
                     </div>
                   );
@@ -591,7 +592,7 @@ function ShiftModal({
     onSave({
       ...formData,
       start: new Date(formData.start),
-      end: new Date(formData.end),
+      end: formData.end ? new Date(formData.end) : undefined,
       metadata: { notes: formData.notes }
     });
   };

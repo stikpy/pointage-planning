@@ -224,7 +224,8 @@ export default function AutoPlanningGenerator({
   const getOptimizationStats = () => {
     const totalShifts = generatedShifts.length;
     const totalHours = generatedShifts.reduce((total, shift) => {
-      const duration = new Date(shift.end).getTime() - new Date(shift.start).getTime();
+      const endTime = shift.end || new Date(shift.start.getTime() + 8 * 60 * 60 * 1000); // 8h par défaut
+      const duration = new Date(endTime).getTime() - new Date(shift.start).getTime();
       return total + duration / (1000 * 60 * 60);
     }, 0);
     
@@ -535,10 +536,10 @@ export default function AutoPlanningGenerator({
                       {' '}• {new Date(shift.start).toLocaleTimeString('fr-FR', { 
                         hour: '2-digit', 
                         minute: '2-digit' 
-                      })} - {new Date(shift.end).toLocaleTimeString('fr-FR', { 
+                      })} - {shift.end ? new Date(shift.end).toLocaleTimeString('fr-FR', { 
                         hour: '2-digit', 
                         minute: '2-digit' 
-                      })}
+                      }) : 'En cours'}
                     </div>
                   );
                 })}

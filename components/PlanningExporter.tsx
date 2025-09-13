@@ -162,7 +162,8 @@ export default function PlanningExporter({
   const generateReportData = (filteredShifts: Shift[]) => {
     const totalShifts = filteredShifts.length;
     const totalHours = filteredShifts.reduce((total, shift) => {
-      const duration = new Date(shift.end).getTime() - new Date(shift.start).getTime();
+      const endTime = shift.end || new Date(shift.start.getTime() + 8 * 60 * 60 * 1000);
+      const duration = new Date(endTime).getTime() - new Date(shift.start).getTime();
       return total + duration / (1000 * 60 * 60);
     }, 0);
     
@@ -182,8 +183,8 @@ export default function PlanningExporter({
           position: employee?.profile.position || '',
           date: formatDate(new Date(shift.start)),
           startTime: formatTime(new Date(shift.start)),
-          endTime: formatTime(new Date(shift.end)),
-          duration: ((new Date(shift.end).getTime() - new Date(shift.start).getTime()) / (1000 * 60 * 60)).toFixed(1),
+          endTime: shift.end ? formatTime(new Date(shift.end)) : 'En cours',
+          duration: shift.end ? ((new Date(shift.end).getTime() - new Date(shift.start).getTime()) / (1000 * 60 * 60)).toFixed(1) : '0.0',
           status: shift.status,
           breakMin: shift.breakMin
         };
@@ -272,14 +273,15 @@ startxref
     
     const rows = filteredShifts.map(shift => {
       const employee = users.find(u => u.id === shift.employeeId);
-      const duration = (new Date(shift.end).getTime() - new Date(shift.start).getTime()) / (1000 * 60 * 60);
+      const endTime = shift.end || new Date(shift.start.getTime() + 8 * 60 * 60 * 1000);
+      const duration = (new Date(endTime).getTime() - new Date(shift.start).getTime()) / (1000 * 60 * 60);
       
       return [
         employee ? `${employee.profile.firstName} ${employee.profile.lastName}` : 'Inconnu',
         employee?.profile.position || '',
         formatDate(new Date(shift.start)),
         formatTime(new Date(shift.start)),
-        formatTime(new Date(shift.end)),
+        shift.end ? formatTime(new Date(shift.end)) : 'En cours',
         duration.toFixed(1),
         shift.breakMin.toString(),
         shift.status
@@ -307,7 +309,8 @@ startxref
     return {
       totalShifts: filteredShifts.length,
       totalHours: filteredShifts.reduce((total, shift) => {
-        const duration = new Date(shift.end).getTime() - new Date(shift.start).getTime();
+        const endTime = shift.end || new Date(shift.start.getTime() + 8 * 60 * 60 * 1000);
+      const duration = new Date(endTime).getTime() - new Date(shift.start).getTime();
         return total + duration / (1000 * 60 * 60);
       }, 0).toFixed(1),
       uniqueEmployees: new Set(filteredShifts.map(shift => shift.employeeId)).size
