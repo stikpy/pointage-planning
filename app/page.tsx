@@ -1,25 +1,81 @@
 "use client";
 
-import React from 'react';
-import { QrCode, Monitor, Settings, Clock, Users, BarChart3 } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { QrCode, Monitor, Settings, Clock, Users, BarChart3, Shield, Building2, LogIn } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '../lib/auth';
+import { UserRole } from '../types';
 
 export default function HomePage() {
+  const { user, loading, hasRole } = useAuth();
+
+  // Rediriger automatiquement si connecté
+  useEffect(() => {
+    if (!loading && user) {
+      const redirectUrl = getRedirectUrlForRole(user.role);
+      window.location.href = redirectUrl;
+    }
+  }, [user, loading]);
+
+  const getRedirectUrlForRole = (role: UserRole) => {
+    switch (role) {
+      case UserRole.SUPER_ADMIN:
+      case UserRole.ADMIN:
+        return '/admin';
+      case UserRole.MANAGER:
+        return '/manager';
+      case UserRole.USER:
+        return '/user';
+      default:
+        return '/';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-800 mb-4 flex items-center justify-center space-x-3">
-            <Clock className="h-10 w-10 text-blue-500" />
-            <span>Pointage & Planning</span>
+            <Shield className="h-10 w-10 text-blue-500" />
+            <span>Pointage & Planning Pro</span>
           </h1>
-          <p className="text-xl text-gray-600">Système de gestion des équipes</p>
+          <p className="text-xl text-gray-600">Système professionnel de gestion des équipes</p>
+          <div className="mt-4 inline-flex items-center space-x-2 bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
+            <Building2 className="w-4 h-4" />
+            <span className="font-medium">Architecture Multi-Rôles</span>
+          </div>
         </div>
 
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           
+          {/* Connexion */}
+          <Link href="/login" className="group">
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-dashed border-green-300">
+              <div className="text-center">
+                <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-green-200 transition-colors">
+                  <LogIn className="h-8 w-8 text-green-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">Connexion</h2>
+                <p className="text-gray-600 text-sm">Accédez à votre tableau de bord</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Administration */}
+          <Link href="/admin" className="group">
+            <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div className="text-center">
+                <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200 transition-colors">
+                  <Building2 className="h-8 w-8 text-purple-500" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">Administration</h2>
+                <p className="text-gray-600 text-sm">Gestion des organisations et utilisateurs</p>
+              </div>
+            </div>
+          </Link>
+
           {/* QR Code Generator */}
           <Link href="/admin/qr-generator" className="group">
             <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">

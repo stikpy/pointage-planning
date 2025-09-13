@@ -1,9 +1,10 @@
 "use client";
 
 import React from 'react';
-import { Users, Clock, TrendingUp, Calendar, AlertTriangle, CheckCircle } from 'lucide-react';
-import { Shift, Employee, DashboardStats } from '../types';
+import { Users, Clock, TrendingUp, Calendar, AlertTriangle, CheckCircle, Building2, Shield } from 'lucide-react';
+import { Shift, Employee, DashboardStats, UserRole } from '../types';
 import { calculateDashboardStats, formatDuration } from '../utils/timeUtils';
+import { useAuth } from '../lib/auth';
 
 interface DashboardProps {
   shifts: Shift[];
@@ -22,6 +23,7 @@ export default function Dashboard({
   presentEmployees = 0,
   onNavigateToQR
 }: DashboardProps) {
+  const { user, hasRole, hasPermission } = useAuth();
   const stats = calculateDashboardStats(shifts);
   const activeEmployees = employees.filter(emp => emp.isActive).length;
 
@@ -155,9 +157,10 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Bouton QR Codes */}
-      {onNavigateToQR && (
-        <div className="mt-6 text-center">
+      {/* Actions selon le rôle */}
+      <div className="mt-6 text-center space-y-4">
+        {/* Bouton QR Codes pour les managers et admins */}
+        {onNavigateToQR && (hasRole(UserRole.MANAGER) || hasRole(UserRole.ADMIN) || hasRole(UserRole.SUPER_ADMIN)) && (
           <button
             onClick={onNavigateToQR}
             className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
@@ -167,8 +170,41 @@ export default function Dashboard({
             </svg>
             Gérer les QR Codes
           </button>
+        )}
+
+        {/* Actions rapides selon le rôle */}
+        <div className="flex flex-wrap justify-center gap-4">
+          {hasRole(UserRole.ADMIN) || hasRole(UserRole.SUPER_ADMIN) ? (
+            <a
+              href="/admin"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Building2 className="w-4 h-4 mr-2" />
+              Administration
+            </a>
+          ) : null}
+
+          {hasRole(UserRole.MANAGER) && (
+            <a
+              href="/manager"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-violet-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-violet-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Gestion Équipe
+            </a>
+          )}
+
+          {hasPermission('shifts', 'write') && (
+            <a
+              href="/clock/emp_1"
+              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white font-medium rounded-lg hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Clock className="w-4 h-4 mr-2" />
+              Pointage Direct
+            </a>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
