@@ -14,6 +14,9 @@ export default function HomePage() {
     if (!loading && user) {
       const redirectUrl = getRedirectUrlForRole(user.role);
       window.location.href = redirectUrl;
+    } else if (!loading && !user) {
+      // Rediriger vers la landing page si pas connecté
+      window.location.href = '/landing';
     }
   }, [user, loading]);
 

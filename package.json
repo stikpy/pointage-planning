@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "migrate": "node scripts/migrate-to-professional.js",
+    "migrate-manual": "node scripts/apply-migration-manual.js",
     "setup-db": "node scripts/setup-database.js",
     "setup-supabase": "node scripts/setup-supabase-tables.js",
     "create-tables": "node scripts/create-tables-direct.js",
